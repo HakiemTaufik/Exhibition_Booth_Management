@@ -16,7 +16,8 @@ class AdminHomeScreen extends StatelessWidget {
       organizerId: event.organizerId,
       title: event.title,
       description: event.description,
-      date: event.date,
+      startDate: event.startDate,
+      endDate: event.endDate,
       status: event.status,
       location: event.location,
       isPublished: event.isPublished == 1 ? 0 : 1, // Flip status
@@ -58,15 +59,55 @@ class AdminHomeScreen extends StatelessWidget {
                   itemCount: events.length,
                   itemBuilder: (context, index) {
                     final event = events[index];
-                    return ListTile(
-                      title: Text(event.title),
-                      subtitle: Text(event.isPublished == 1 ? "Published" : "Draft (Hidden)"),
-                      trailing: Switch(
-                        value: event.isPublished == 1,
-                        activeColor: Colors.green,
-                        onChanged: (val) => _togglePublish(event),
+                    return Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(12),
+                        title: Text(event.title, style: const TextStyle(fontWeight: FontWeight.bold)),
+
+                        // --- UPDATED SUBTITLE SECTION ---
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            // 1. Date
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_today, size: 12, color: Colors.grey),
+                                const SizedBox(width: 4),
+                                Text("${event.startDate} - ${event.endDate}", style: const TextStyle(fontSize: 12)),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            // 2. Location
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on, size: 12, color: Colors.grey),
+                                const SizedBox(width: 4),
+                                Text(event.location, style: const TextStyle(fontSize: 12)),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            // 3. Status Text
+                            Text(
+                              event.isPublished == 1 ? "Published" : "Draft (Hidden)",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: event.isPublished == 1 ? Colors.green : Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                        // --------------------------------
+
+                        trailing: Switch(
+                          value: event.isPublished == 1,
+                          activeColor: Colors.green,
+                          onChanged: (val) => _togglePublish(event),
+                        ),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrganizerEventDashboard(user: user, event: event))),
                       ),
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrganizerEventDashboard(user: user, event: event))),
                     );
                   },
                 );

@@ -9,7 +9,7 @@ import '../../providers/user_provider.dart';
 
 class BoothSelectionScreen extends StatefulWidget {
   final Event event;
-  final AppUser? user; // Kept for compatibility
+  final AppUser? user;
 
   const BoothSelectionScreen({super.key, required this.event, this.user});
 
@@ -18,13 +18,10 @@ class BoothSelectionScreen extends StatefulWidget {
 }
 
 class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
-  // Local "Cart" State
   final Set<String> _selectedBoothIds = {};
-  // Data State
   List<Booth> _allBooths = [];
   List<Booking> _existingBookings = [];
 
-  // Helper to check adjacent competitors
   bool _isCompetitorAdjacent(String boothName, String myIndustry) {
     try {
       final parts = boothName.split('-');
@@ -59,7 +56,6 @@ class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
     final descCtrl = TextEditingController();
     final industryCtrl = TextEditingController();
     final addOnsCtrl = TextEditingController();
-    // Get user from Provider (fallback to widget.user)
     final user = Provider.of<UserProvider>(context, listen: false).user ?? widget.user;
 
     if (user == null) {
@@ -96,7 +92,6 @@ class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
                 return;
               }
 
-              // Competitor Check Loop
               bool blocked = false;
               for (var boothId in _selectedBoothIds) {
                 final booth = _allBooths.firstWhere((b) => b.id == boothId);
@@ -112,7 +107,6 @@ class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
                 return;
               }
 
-              // Create Bookings
               for (var boothId in _selectedBoothIds) {
                 final booth = _allBooths.firstWhere((b) => b.id == boothId);
                 final booking = Booking(
@@ -127,6 +121,8 @@ class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
                   boothName: booth.name,
                   eventTitle: widget.event.title,
                   exhibitorEmail: user.email,
+                  startDate: widget.event.startDate,
+                  endDate: widget.event.endDate,
                 );
                 await FirestoreService.instance.createBooking(booking);
               }
@@ -160,29 +156,67 @@ class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
 
                 return Column(
                   children: [
-                    // --- UPDATED: SINGLE FLOOR PLAN IMAGE SECTION ---
-                    // Replaced incorrect "imageUrls" carousel with "floorPlanImage" view
+                    // --- NEW: EVENT DETAILS SECTION ---
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16.0),
+                      color: Colors.blue[50], // Light blue background
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(Icons.calendar_today, size: 16, color: Colors.blue),
+                              const SizedBox(width: 8),
+                              Text(
+                                "${widget.event.startDate} - ${widget.event.endDate}",
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              const Icon(Icons.location_on, size: 16, color: Colors.grey),
+                              const SizedBox(width: 8),
+                              Text(widget.event.location, style: const TextStyle(fontSize: 14)),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            widget.event.description,
+                            style: TextStyle(color: Colors.grey[700]),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    // ----------------------------------
+
+                    // Floor Plan Image
                     if (widget.event.floorPlanImage != null && widget.event.floorPlanImage!.isNotEmpty)
-                      Container(
-                        height: 220,
-                        width: double.infinity,
-                        color: Colors.black12,
-                        child: Image.network(
-                          widget.event.floorPlanImage!,
-                          fit: BoxFit.contain,
-                          errorBuilder: (c,e,s) => const Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.broken_image, size: 50, color: Colors.grey),
-                                Text("Could not load map"),
-                              ],
+                      Expanded(
+                        flex: 2, // Allocate some space to image, but let grid take more if needed
+                        child: Container(
+                          width: double.infinity,
+                          color: Colors.black12,
+                          child: Image.network(
+                            widget.event.floorPlanImage!,
+                            fit: BoxFit.contain,
+                            errorBuilder: (c,e,s) => const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.broken_image, size: 50, color: Colors.grey),
+                                  Text("Could not load map"),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                       ),
 
-                    // Legend
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Row(
@@ -195,8 +229,9 @@ class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
                       ),
                     ),
 
-                    // Grid
+                    // Booth Grid
                     Expanded(
+                      flex: 3, // Give grid more space
                       child: GridView.builder(
                         padding: const EdgeInsets.all(16),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -231,7 +266,11 @@ class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(booth.name, style: TextStyle(fontWeight: FontWeight.bold, color: borderColor)),
+
+                                    // Size & Price
+                                    if (!isBooked) Text(booth.dimensions, style: const TextStyle(fontSize: 10, fontStyle: FontStyle.italic)),
                                     if (!isBooked) Text("RM${booth.price.toInt()}", style: const TextStyle(fontSize: 10)),
+
                                     if (isSelected) const Icon(Icons.check_circle, size: 16, color: Colors.blue)
                                   ],
                                 ),

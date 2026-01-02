@@ -6,7 +6,6 @@ import '../organizer/organizer_home_screen.dart';
 import '../admin/admin_home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  // REMOVED: final String role; (We don't need this anymore)
   const LoginScreen({super.key});
 
   @override
@@ -18,7 +17,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  // ADDED: State to hold the selected role
   String _selectedRole = 'Exhibitor';
   final List<String> _roles = ['Exhibitor', 'Organizer', 'Administrator'];
 
@@ -41,8 +39,28 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
+      // --- NEW: SECURITY CHECKS ---
+      if (user == null) {
+        // SCENARIO: Admin deleted the user from Firestore
+        FirebaseAuth.instance.signOut();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Account does not exist. Contact Admin.")),
+        );
+        return;
+      }
+
+      if (user.isDisabled) {
+        // SCENARIO: Admin disabled the account
+        FirebaseAuth.instance.signOut();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Your account has been disabled. Contact Admin.")),
+        );
+        return;
+      }
+      // ----------------------------
+
       // 3. Verify the role matches what they selected
-      if (user != null && user.role == _selectedRole) {
+      if (user.role == _selectedRole) {
 
         Widget targetScreen;
         if (_selectedRole == 'Exhibitor') targetScreen = ExhibitorHomeScreen(user: user);
@@ -55,7 +73,7 @@ class _LoginScreenState extends State<LoginScreen> {
               (r) => false,
         );
       } else {
-        // Role mismatch or user not found
+        // Role mismatch
         FirebaseAuth.instance.signOut();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Login successful, but role mismatch. Please check your selection.")),
@@ -82,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const Text("Welcome Back!", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
               const SizedBox(height: 30),
 
-              // ADDED: Role Dropdown
+              // Role Dropdown
               DropdownButtonFormField<String>(
                 value: _selectedRole,
                 decoration: const InputDecoration(

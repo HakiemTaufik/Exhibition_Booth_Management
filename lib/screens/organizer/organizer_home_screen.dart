@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../models/user_model.dart';
 import '../../models/event_model.dart';
-import '../../database/firestore_service.dart'; // UPDATED IMPORT
+import '../../database/firestore_service.dart';
 import 'edit_event_screen.dart';
 import 'organizer_event_dashboard.dart';
 import '../auth/welcome_screen.dart';
 
-class OrganizerHomeScreen extends StatelessWidget { // Changed to Stateless for StreamBuilder
-  final AppUser user; // Updated Model
+class OrganizerHomeScreen extends StatelessWidget {
+  final AppUser user;
   const OrganizerHomeScreen({super.key, required this.user});
 
   @override
@@ -29,7 +29,6 @@ class OrganizerHomeScreen extends StatelessWidget { // Changed to Stateless for 
           ),
         ],
       ),
-      // REAL-TIME STREAM
       body: StreamBuilder<List<Event>>(
         stream: FirestoreService.instance.getEventsForOrganizer(user.id!),
         builder: (context, snapshot) {
@@ -54,7 +53,8 @@ class OrganizerHomeScreen extends StatelessWidget { // Changed to Stateless for 
                 margin: const EdgeInsets.only(bottom: 16),
                 child: ListTile(
                   title: Text(event.title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text("${event.date} • ${event.status}"),
+                  // [FIXED] Use startDate and endDate here
+                  subtitle: Text("${event.startDate} - ${event.endDate} • ${event.status}"),
                   trailing: IconButton(
                     icon: const Icon(Icons.delete, color: Colors.red),
                     onPressed: () => FirestoreService.instance.deleteEvent(event.id!),

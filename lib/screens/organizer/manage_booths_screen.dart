@@ -10,6 +10,8 @@ class ManageBoothsScreen extends StatelessWidget {
 
   final nameController = TextEditingController();
   final priceController = TextEditingController();
+  // --- NEW ---
+  final sizeController = TextEditingController();
 
   void _addBooth(BuildContext context) {
     showDialog(
@@ -20,6 +22,13 @@ class ManageBoothsScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(controller: nameController, decoration: const InputDecoration(labelText: "Name (e.g. A-1)")),
+            const SizedBox(height: 10),
+            // --- NEW INPUT ---
+            TextField(
+                controller: sizeController,
+                decoration: const InputDecoration(labelText: "Size", hintText: "3x3", suffixText: "m²")
+            ),
+            const SizedBox(height: 10),
             TextField(controller: priceController, decoration: const InputDecoration(labelText: "Price"), keyboardType: TextInputType.number),
           ],
         ),
@@ -27,17 +36,25 @@ class ManageBoothsScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               if (nameController.text.isNotEmpty) {
+
+                String size = sizeController.text.isEmpty ? "3x3" : sizeController.text;
+                if (!size.contains("m²")) size += " m²";
+
                 final booth = Booth(
                   eventId: event.id!,
                   name: nameController.text,
-                  size: '3x3m',
+                  size: size, // Save size
                   price: double.tryParse(priceController.text) ?? 0,
                   status: 'Available',
+                  dimensions: size, // Update both fields just to be safe if model has both
                 );
                 FirestoreService.instance.createBooth(booth);
                 Navigator.pop(context);
+
+                // Clear inputs
                 nameController.clear();
                 priceController.clear();
+                sizeController.clear();
               }
             },
             child: const Text("Add"),
@@ -64,7 +81,8 @@ class ManageBoothsScreen extends StatelessWidget {
               return ListTile(
                 leading: Icon(Icons.store, color: booth.status == 'Available' ? Colors.green : Colors.red),
                 title: Text(booth.name),
-                subtitle: Text("RM${booth.price} - ${booth.status}"),
+                // --- SHOW SIZE ---
+                subtitle: Text("${booth.dimensions} • RM${booth.price} • ${booth.status}"),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete),
                   onPressed: () => FirestoreService.instance.deleteBooth(booth.id!),

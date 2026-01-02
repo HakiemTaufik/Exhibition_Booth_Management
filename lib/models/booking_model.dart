@@ -11,7 +11,11 @@ class Booking {
   final String boothName; // Stored for display
   final String eventTitle; // Stored for display
   final String exhibitorEmail;
-  final String? rejectionReason; // <--- NEW FIELD ADDED
+  final String? rejectionReason;
+
+  // --- NEW FIELDS ---
+  final String startDate;
+  final String endDate;
 
   Booking({
     this.id,
@@ -26,7 +30,10 @@ class Booking {
     required this.boothName,
     required this.eventTitle,
     required this.exhibitorEmail,
-    this.rejectionReason, // <--- Added to constructor
+    this.rejectionReason,
+    // --- REQUIRED IN CONSTRUCTOR ---
+    required this.startDate,
+    required this.endDate,
   });
 
   // Convert Booking to Map for Firestore
@@ -43,7 +50,10 @@ class Booking {
       'boothName': boothName,
       'eventTitle': eventTitle,
       'exhibitorEmail': exhibitorEmail,
-      'rejectionReason': rejectionReason, // <--- Save to DB
+      'rejectionReason': rejectionReason,
+      // --- SAVE TO DB ---
+      'startDate': startDate,
+      'endDate': endDate,
     };
   }
 
@@ -62,7 +72,10 @@ class Booking {
       boothName: map['boothName'] ?? '',
       eventTitle: map['eventTitle'] ?? '',
       exhibitorEmail: map['exhibitorEmail'] ?? '',
-      rejectionReason: map['rejectionReason'], // <--- Read from DB
+      rejectionReason: map['rejectionReason'],
+      // --- READ FROM DB ---
+      startDate: map['startDate'] ?? '',
+      endDate: map['endDate'] ?? '',
     );
   }
 }

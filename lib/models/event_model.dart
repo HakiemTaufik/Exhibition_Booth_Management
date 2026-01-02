@@ -3,50 +3,57 @@ class Event {
   final String organizerId;
   final String title;
   final String description;
-  final String date;
   final String location;
-  final String status; // Fixed: Added status field
+  final String status;
   final int isPublished;
-  final String? floorPlanImage; // Fixed: Added floorPlanImage field
+  final String? floorPlanImage;
+
+  // --- CHANGED: Split 'date' into start and end ---
+  final String startDate;
+  final String endDate;
 
   Event({
     this.id,
     required this.organizerId,
     required this.title,
     required this.description,
-    required this.date,
     required this.location,
-    required this.status, // Fixed: Added to constructor
+    required this.status,
     required this.isPublished,
-    this.floorPlanImage, // Fixed: Added to constructor
+    this.floorPlanImage,
+    // --- REQUIRED IN CONSTRUCTOR ---
+    required this.startDate,
+    required this.endDate,
   });
 
-  // Convert Event to Map for Firestore
   Map<String, dynamic> toMap() {
     return {
       'organizerId': organizerId,
       'title': title,
       'description': description,
-      'date': date,
       'location': location,
-      'status': status, // Save status to DB
+      'status': status,
       'isPublished': isPublished,
-      'floorPlanImage': floorPlanImage, // Save image URL to DB
+      'floorPlanImage': floorPlanImage,
+      // --- SAVE TO DB ---
+      'startDate': startDate,
+      'endDate': endDate,
     };
   }
 
-  // Create Event from Firestore Map
   factory Event.fromMap(Map<String, dynamic> map, String documentId) {
     return Event(
       id: documentId,
       organizerId: map['organizerId'] ?? '',
       title: map['title'] ?? '',
       description: map['description'] ?? '',
-      date: map['date'] ?? '',
       location: map['location'] ?? '',
-      status: map['status'] ?? 'Upcoming', // Default to 'Upcoming' if null
+      status: map['status'] ?? 'Upcoming',
       isPublished: map['isPublished'] ?? 0,
-      floorPlanImage: map['floorPlanImage'], // Nullable
+      floorPlanImage: map['floorPlanImage'],
+      // --- READ FROM DB (Fallback to 'date' if old data exists) ---
+      startDate: map['startDate'] ?? map['date'] ?? '',
+      endDate: map['endDate'] ?? map['date'] ?? '',
     );
   }
 }

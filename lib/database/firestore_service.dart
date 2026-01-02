@@ -23,19 +23,27 @@ class FirestoreService {
   }
 
   Future<void> createUserProfile(String uid, String email, String role) async {
-    await _db.collection('users').doc(uid).set({'email': email, 'role': role});
+    await _db.collection('users').doc(uid).set({'email': email, 'role': role, 'isDisabled': false});
   }
 
-  // [FIX] Added Missing Method: getAllUsers
   Stream<List<AppUser>> getAllUsers() {
     return _db.collection('users').snapshots().map((snapshot) {
       return snapshot.docs.map((doc) => AppUser.fromMap(doc.data(), doc.id)).toList();
     });
   }
 
-  // [FIX] Added Missing Method: deleteUser
   Future<void> deleteUser(String uid) async {
     await _db.collection('users').doc(uid).delete();
+  }
+
+  // --- NEW: TOGGLE DISABLE STATUS ---
+  Future<void> toggleUserDisabled(String uid, bool currentStatus) async {
+    await _db.collection('users').doc(uid).update({'isDisabled': !currentStatus});
+  }
+
+  // --- NEW: SEND PASSWORD RESET EMAIL ---
+  Future<void> sendPasswordReset(String email) async {
+    await _auth.sendPasswordResetEmail(email: email);
   }
 
   // --- EVENT METHODS ---
@@ -91,7 +99,6 @@ class FirestoreService {
         .map((s) => s.docs.map((d) => Booking.fromMap(d.data(), d.id)).toList());
   }
 
-  // [FIX] Added Missing Method: getUserBookings
   Stream<List<Booking>> getUserBookings(String userId) {
     return _db.collection('bookings')
         .where('userId', isEqualTo: userId)
@@ -120,9 +127,25 @@ class FirestoreService {
       await bookingRef.update({'status': status});
     }
   }
-  // Update Booking Description & Add-ons
+
+  // --- EXHIBITOR EDIT (Simple) ---
   Future<void> updateBookingDetails(String bookingId, String description, String addOns) async {
     await _db.collection('bookings').doc(bookingId).update({
+      'description': description,
+      'addOns': addOns,
+    });
+  }
+
+  // --- ADMIN EDIT (Full) ---
+  Future<void> updateBookingAdmin(String bookingId, {
+    required String companyName,
+    required String industry,
+    required String description,
+    required String addOns
+  }) async {
+    await _db.collection('bookings').doc(bookingId).update({
+      'companyName': companyName,
+      'industry': industry,
       'description': description,
       'addOns': addOns,
     });

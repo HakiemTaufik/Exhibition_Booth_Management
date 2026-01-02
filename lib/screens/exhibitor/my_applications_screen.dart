@@ -57,13 +57,7 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () async {
-              // Create updated booking object or just update specific fields via service
-              // For simplicity, we assume FirestoreService has a generic update or we use direct Firestore call here
-              // Ideally, add `updateBookingDetails` to FirestoreService.
-              // Here is a direct implementation for speed:
-
-              // We need to implement a specific update method in FirestoreService or use a map here.
-              // Let's assume you add this simple method to FirestoreService (see below).
+              // Using the method added to FirestoreService
               await FirestoreService.instance.updateBookingDetails(booking.id!, descCtrl.text, addOnsCtrl.text);
 
               if (!mounted) return;
@@ -111,7 +105,14 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text("Booth: ${b.boothName}"),
+                      Text("Date: ${b.startDate}", style: const TextStyle(color: Colors.grey, fontSize: 12)),
                       Text("Industry: ${b.industry}"),
+
+                      // --- ADDED: SHOW DESCRIPTION ---
+                      // This ensures Exhibitor sees updates made by Admin
+                      Text("Desc: ${b.description}", style: const TextStyle(fontStyle: FontStyle.italic)),
+                      // -------------------------------
+
                       Text("Add-ons: ${b.addOns}"),
                       if (b.status == 'Rejected') Text("Reason: ${b.rejectionReason}", style: const TextStyle(color: Colors.red)),
 

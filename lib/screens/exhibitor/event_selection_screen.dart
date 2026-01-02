@@ -23,9 +23,14 @@ class _EventSelectionScreenState extends State<EventSelectionScreen> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(8.0),
+            padding: const EdgeInsets.all(16.0),
             child: TextField(
-              decoration: const InputDecoration(labelText: "Search", prefixIcon: Icon(Icons.search), border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: "Search",
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+              ),
               onChanged: (v) => setState(() => _search = v),
             ),
           ),
@@ -46,13 +51,85 @@ class _EventSelectionScreenState extends State<EventSelectionScreen> {
 
                 return ListView.builder(
                   itemCount: events.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemBuilder: (context, index) {
                     final event = events[index];
-                    return ListTile(
-                      title: Text(event.title),
-                      subtitle: Text(event.location),
-                      trailing: const Icon(Icons.arrow_forward),
-                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => BoothSelectionScreen(user: widget.user, event: event))),
+                    return Card(
+                      elevation: 2,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(10),
+                        onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => BoothSelectionScreen(user: widget.user, event: event))
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Row(
+                            children: [
+                              // Left Side: Event Info
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      event.title,
+                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                    ),
+                                    const SizedBox(height: 6),
+
+                                    // Date Row
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.calendar_today, size: 14, color: Colors.blue),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          "${event.startDate} - ${event.endDate}",
+                                          style: TextStyle(fontSize: 12, color: Colors.grey[800]),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 4),
+
+                                    // Location Row
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.location_on, size: 14, color: Colors.red),
+                                        const SizedBox(width: 6),
+                                        Text(
+                                          event.location,
+                                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              // Right Side: Status & Arrow
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.green[100],
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      event.status, // "Upcoming"
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green[800]),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     );
                   },
                 );

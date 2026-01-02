@@ -4,7 +4,8 @@ import '../../models/event_model.dart';
 import '../../models/booth_model.dart';
 import '../../database/firestore_service.dart';
 import 'edit_event_screen.dart';
-import 'manage_bookings_screen.dart'; // <--- ADD THIS IMPORT
+import 'manage_bookings_screen.dart';
+import '../exhibitor/booth_selection_screen.dart'; // Import for Preview
 
 class OrganizerEventDashboard extends StatefulWidget {
   final AppUser user;
@@ -22,6 +23,7 @@ class _OrganizerEventDashboardState extends State<OrganizerEventDashboard> {
   void _showAddBoothDialog() {
     final _nameController = TextEditingController();
     final _priceController = TextEditingController();
+    final _sizeController = TextEditingController();
 
     showDialog(
       context: context,
@@ -36,6 +38,15 @@ class _OrganizerEventDashboardState extends State<OrganizerEventDashboard> {
             ),
             const SizedBox(height: 10),
             TextField(
+              controller: _sizeController,
+              decoration: const InputDecoration(
+                labelText: "Size",
+                hintText: "3x3",
+                suffixText: "m²",
+              ),
+            ),
+            const SizedBox(height: 10),
+            TextField(
               controller: _priceController,
               decoration: const InputDecoration(labelText: "Price (RM)"),
               keyboardType: TextInputType.number,
@@ -47,12 +58,17 @@ class _OrganizerEventDashboardState extends State<OrganizerEventDashboard> {
           ElevatedButton(
             onPressed: () async {
               if (_nameController.text.isNotEmpty && _priceController.text.isNotEmpty) {
+
+                // Construct the dimension string (e.g., "3x3 m²")
+                String size = _sizeController.text.isEmpty ? "3x3" : _sizeController.text;
+                if (!size.contains("m²")) size += " m²";
+
                 final newBooth = Booth(
                   eventId: widget.event.id!,
                   name: _nameController.text,
                   price: double.tryParse(_priceController.text) ?? 0.0,
                   status: 'Available',
-                  dimensions: '3x3',
+                  dimensions: size,
                 );
                 await FirestoreService.instance.createBooth(newBooth);
                 if (mounted) Navigator.pop(context);
@@ -92,6 +108,23 @@ class _OrganizerEventDashboardState extends State<OrganizerEventDashboard> {
       appBar: AppBar(
         title: Text(widget.event.title),
         actions: [
+          // --- PREVIEW AS EXHIBITOR BUTTON ---
+          IconButton(
+            icon: const Icon(Icons.visibility),
+            tooltip: "Preview as Exhibitor",
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => BoothSelectionScreen(
+                    event: widget.event,
+                    user: widget.user,
+                  ),
+                ),
+              );
+            },
+          ),
+          // -----------------------------------
           IconButton(
             icon: const Icon(Icons.edit),
             onPressed: () {
@@ -128,7 +161,7 @@ class _OrganizerEventDashboardState extends State<OrganizerEventDashboard> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(widget.event.date, style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text("${widget.event.startDate} - ${widget.event.endDate}", style: const TextStyle(fontWeight: FontWeight.bold)),
                     Text(widget.event.location, style: const TextStyle(color: Colors.grey)),
                   ],
                 ),
@@ -147,7 +180,7 @@ class _OrganizerEventDashboardState extends State<OrganizerEventDashboard> {
             ),
           ),
 
-          // --- NEW BUTTON: REVIEW APPLICATIONS ---
+          // --- BUTTON: REVIEW APPLICATIONS ---
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: SizedBox(
@@ -159,13 +192,17 @@ class _OrganizerEventDashboardState extends State<OrganizerEventDashboard> {
                 onPressed: () {
                   Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (c) => ManageBookingsScreen(event: widget.event))
+                      MaterialPageRoute(
+                        builder: (c) => ManageBookingsScreen(
+                          event: widget.event,
+                          currentUser: widget.user, // <--- IMPORTANT: PASS USER HERE
+                        ),
+                      )
                   );
                 },
               ),
             ),
           ),
-          // ---------------------------------------
 
           const Divider(),
 
@@ -217,6 +254,7 @@ class _OrganizerEventDashboardState extends State<OrganizerEventDashboard> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Text(booth.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Text(booth.dimensions, style: const TextStyle(fontSize: 10, fontStyle: FontStyle.italic)),
                             Text("RM${booth.price.toInt()}", style: const TextStyle(fontSize: 12)),
                             const SizedBox(height: 4),
                             Text(booth.status, style: TextStyle(fontSize: 10, color: isBooked ? Colors.red : Colors.green[800])),
@@ -231,7 +269,6 @@ class _OrganizerEventDashboardState extends State<OrganizerEventDashboard> {
           ),
         ],
       ),
-      // --- ADD BOOTH BUTTON ---
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddBoothDialog,
         label: const Text("Add Booth"),
