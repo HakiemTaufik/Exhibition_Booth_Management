@@ -10,6 +10,7 @@ class AdminHomeScreen extends StatelessWidget {
   final AppUser user;
   const AdminHomeScreen({super.key, required this.user});
 
+  // Logic to toggle Published/Draft status
   void _togglePublish(Event event) {
     final updated = Event(
       id: event.id,
@@ -25,6 +26,41 @@ class AdminHomeScreen extends StatelessWidget {
     );
     FirestoreService.instance.updateEvent(updated);
   }
+
+  // --- NEW: CONFIRMATION REMINDER DIALOG ---
+  void _deleteEvent(BuildContext context, String eventId) {
+    showDialog(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: const Text("Delete Event?"),
+        // This is the "Reminder" text
+        content: const Text(
+          "Are you sure you want to delete this event?\n\nThis will permanently remove all data and cannot be undone.",
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(c), // Close dialog, do nothing
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () {
+              // 1. Actually delete from database
+              FirestoreService.instance.deleteEvent(eventId);
+              // 2. Close the dialog
+              Navigator.pop(c);
+              // 3. Show success message
+              ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Event deleted successfully"))
+              );
+            },
+            child: const Text("Delete", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+  // ------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -49,12 +85,16 @@ class AdminHomeScreen extends StatelessWidget {
           ),
           const Divider(),
           const Padding(padding: EdgeInsets.all(16), child: Text("All Events", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+
           Expanded(
             child: StreamBuilder<List<Event>>(
-              stream: FirestoreService.instance.getAllEvents(publishedOnly: false), // Fetch EVERYTHING
+              stream: FirestoreService.instance.getAllEvents(publishedOnly: false),
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
                 final events = snapshot.data!;
+
+                if (events.isEmpty) return const Center(child: Text("No events found."));
+
                 return ListView.builder(
                   itemCount: events.length,
                   itemBuilder: (context, index) {
@@ -65,12 +105,11 @@ class AdminHomeScreen extends StatelessWidget {
                         contentPadding: const EdgeInsets.all(12),
                         title: Text(event.title, style: const TextStyle(fontWeight: FontWeight.bold)),
 
-                        // --- UPDATED SUBTITLE SECTION ---
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 4),
-                            // 1. Date
+                            // Date
                             Row(
                               children: [
                                 const Icon(Icons.calendar_today, size: 12, color: Colors.grey),
@@ -79,7 +118,7 @@ class AdminHomeScreen extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 2),
-                            // 2. Location
+                            // Location
                             Row(
                               children: [
                                 const Icon(Icons.location_on, size: 12, color: Colors.grey),
@@ -88,7 +127,7 @@ class AdminHomeScreen extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 6),
-                            // 3. Status Text
+                            // Status
                             Text(
                               event.isPublished == 1 ? "Published" : "Draft (Hidden)",
                               style: TextStyle(
@@ -99,13 +138,27 @@ class AdminHomeScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        // --------------------------------
 
-                        trailing: Switch(
-                          value: event.isPublished == 1,
-                          activeColor: Colors.green,
-                          onChanged: (val) => _togglePublish(event),
+                        // --- UPDATED BUTTONS ---
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Publish Switch
+                            Switch(
+                              value: event.isPublished == 1,
+                              activeColor: Colors.green,
+                              onChanged: (val) => _togglePublish(event),
+                            ),
+                            // Delete Button (Calls the Reminder Dialog)
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              tooltip: "Delete Event",
+                              onPressed: () => _deleteEvent(context, event.id!), // <--- Trigger Reminder Here
+                            ),
+                          ],
                         ),
+                        // -----------------------
+
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrganizerEventDashboard(user: user, event: event))),
                       ),
                     );
