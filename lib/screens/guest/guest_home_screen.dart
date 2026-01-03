@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import '../../database/firestore_service.dart';
 import '../../models/event_model.dart';
 import 'event_details_screen.dart';
@@ -48,6 +50,19 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemBuilder: (context, index) {
                     final event = events[index];
+
+                    // --- DATE FORMATTING ---
+                    String formattedDate = "${event.startDate} - ${event.endDate}";
+                    try {
+                      final inputFormat = DateFormat("d/M/yyyy");
+                      DateTime start = inputFormat.parse(event.startDate);
+                      DateTime end = inputFormat.parse(event.endDate);
+                      final outputFormat = DateFormat('MMM dd, yyyy');
+                      formattedDate = "${outputFormat.format(start)} - ${outputFormat.format(end)}";
+                    } catch (e) {
+                      // Ignore errors
+                    }
+
                     return Card(
                       elevation: 2,
                       margin: const EdgeInsets.only(bottom: 12),
@@ -62,6 +77,31 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                           padding: const EdgeInsets.all(16.0),
                           child: Row(
                             children: [
+                              // Image Thumbnail
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: CachedNetworkImage(
+                                  imageUrl: (event.floorPlanImage != null &&
+                                      event.floorPlanImage!.isNotEmpty &&
+                                      event.floorPlanImage!.startsWith('http'))
+                                      ? event.floorPlanImage!
+                                      : "https://via.placeholder.com/150",
+
+                                  width: 60,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => Container(
+                                      width: 60, height: 60, color: Colors.grey[200],
+                                      child: const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                                  ),
+                                  errorWidget: (context, url, error) => Container(
+                                      width: 60, height: 60, color: Colors.grey[300],
+                                      child: const Icon(Icons.image_not_supported, color: Colors.grey)
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+
                               // Left Side: Event Info
                               Expanded(
                                 child: Column(
@@ -70,36 +110,48 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                                     Text(
                                       event.title,
                                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                     const SizedBox(height: 6),
 
-                                    // Date Row
+                                    // Date Row (FIXED: Added Expanded to prevent overflow)
                                     Row(
                                       children: [
                                         const Icon(Icons.calendar_today, size: 14, color: Colors.blue),
                                         const SizedBox(width: 6),
-                                        Text(
-                                          "${event.startDate} - ${event.endDate}",
-                                          style: TextStyle(fontSize: 12, color: Colors.grey[800]),
+                                        Expanded( // <--- THIS FIXES THE OVERFLOW
+                                          child: Text(
+                                            formattedDate,
+                                            style: TextStyle(fontSize: 12, color: Colors.grey[800]),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                       ],
                                     ),
                                     const SizedBox(height: 4),
 
-                                    // Location Row
+                                    // Location Row (FIXED: Added Expanded)
                                     Row(
                                       children: [
                                         const Icon(Icons.location_on, size: 14, color: Colors.red),
                                         const SizedBox(width: 6),
-                                        Text(
-                                          event.location,
-                                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                        Expanded( // <--- THIS FIXES THE OVERFLOW
+                                          child: Text(
+                                            event.location,
+                                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ],
                                 ),
                               ),
+
+                              const SizedBox(width: 8), // Padding between text and badge
 
                               // Right Side: Status Badge
                               Column(
@@ -112,7 +164,7 @@ class _GuestHomeScreenState extends State<GuestHomeScreen> {
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
-                                      event.status, // "Upcoming"
+                                      event.status,
                                       style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green[800]),
                                     ),
                                   ),

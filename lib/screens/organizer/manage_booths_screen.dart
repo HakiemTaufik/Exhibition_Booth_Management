@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../models/event_model.dart';
-import '../../models/booking_model.dart';
 import '../../models/booth_model.dart';
 import '../../database/firestore_service.dart';
 

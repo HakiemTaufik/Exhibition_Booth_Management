@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // <--- 1. IMPORT THIS
 import '../../database/firestore_service.dart';
 import '../../models/booking_model.dart';
 
@@ -57,7 +58,6 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
           ElevatedButton(
             onPressed: () async {
-              // Using the method added to FirestoreService
               await FirestoreService.instance.updateBookingDetails(booking.id!, descCtrl.text, addOnsCtrl.text);
 
               if (!mounted) return;
@@ -89,6 +89,20 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
               final b = bookings[index];
               final isPending = b.status == 'Pending';
 
+              // --- 2. DATE FORMATTING LOGIC ---
+              String formattedDate = b.startDate;
+              try {
+                // Assuming start date is stored like "08/01/2026"
+                final inputFormat = DateFormat("d/M/yyyy");
+                DateTime start = inputFormat.parse(b.startDate);
+
+                final outputFormat = DateFormat('MMM dd, yyyy');
+                formattedDate = outputFormat.format(start);
+              } catch (e) {
+                // Ignore errors
+              }
+              // --------------------------------
+
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
                 child: Padding(
@@ -105,14 +119,12 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text("Booth: ${b.boothName}"),
-                      Text("Date: ${b.startDate}", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+
+                      // --- 3. USE FORMATTED DATE ---
+                      Text("Date: $formattedDate", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+
                       Text("Industry: ${b.industry}"),
-
-                      // --- ADDED: SHOW DESCRIPTION ---
-                      // This ensures Exhibitor sees updates made by Admin
                       Text("Desc: ${b.description}", style: const TextStyle(fontStyle: FontStyle.italic)),
-                      // -------------------------------
-
                       Text("Add-ons: ${b.addOns}"),
                       if (b.status == 'Rejected') Text("Reason: ${b.rejectionReason}", style: const TextStyle(color: Colors.red)),
 

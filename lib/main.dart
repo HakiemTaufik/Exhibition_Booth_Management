@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:provider/provider.dart'; // NEW
-import 'providers/user_provider.dart';   // NEW
+import 'package:provider/provider.dart';
+import 'providers/user_provider.dart';
 import 'screens/auth/welcome_screen.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:google_fonts/google_fonts.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,6 +45,7 @@ class ExhibitionApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+        textTheme: GoogleFonts.poppinsTextTheme(),
       ),
       home: const WelcomeScreen(),
     );

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // <--- 1. Added Import
 import '../../models/user_model.dart';
 import '../../models/event_model.dart';
 import '../../models/booth_model.dart';
 import '../../database/firestore_service.dart';
 import 'edit_event_screen.dart';
 import 'manage_bookings_screen.dart';
-import '../exhibitor/booth_selection_screen.dart'; // Import for Preview
+import '../exhibitor/booth_selection_screen.dart';
 
 class OrganizerEventDashboard extends StatefulWidget {
   final AppUser user;
@@ -104,6 +105,21 @@ class _OrganizerEventDashboardState extends State<OrganizerEventDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    // --- 2. NEW DATE FORMATTING LOGIC ---
+    String formattedDate = "${widget.event.startDate} - ${widget.event.endDate}";
+    try {
+      // Parse "08/01/2026" -> Display "Jan 08, 2026"
+      final inputFormat = DateFormat("d/M/yyyy");
+      DateTime start = inputFormat.parse(widget.event.startDate);
+      DateTime end = inputFormat.parse(widget.event.endDate);
+
+      final outputFormat = DateFormat('MMM dd, yyyy');
+      formattedDate = "${outputFormat.format(start)} - ${outputFormat.format(end)}";
+    } catch (e) {
+      // Ignore errors (e.g. if date is already formatted or empty), keep original
+    }
+    // ------------------------------------
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.event.title),
@@ -161,7 +177,9 @@ class _OrganizerEventDashboardState extends State<OrganizerEventDashboard> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("${widget.event.startDate} - ${widget.event.endDate}", style: const TextStyle(fontWeight: FontWeight.bold)),
+                    // --- 3. USE FORMATTED DATE HERE ---
+                    Text(formattedDate, style: const TextStyle(fontWeight: FontWeight.bold)),
+
                     Text(widget.event.location, style: const TextStyle(color: Colors.grey)),
                   ],
                 ),
@@ -195,7 +213,7 @@ class _OrganizerEventDashboardState extends State<OrganizerEventDashboard> {
                       MaterialPageRoute(
                         builder: (c) => ManageBookingsScreen(
                           event: widget.event,
-                          currentUser: widget.user, // <--- IMPORTANT: PASS USER HERE
+                          currentUser: widget.user,
                         ),
                       )
                   );

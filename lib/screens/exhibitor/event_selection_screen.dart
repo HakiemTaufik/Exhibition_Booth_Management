@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // <--- 1. IMPORT THIS
 import '../../models/user_model.dart';
 import '../../models/event_model.dart';
 import '../../database/firestore_service.dart';
@@ -40,7 +41,6 @@ class _EventSelectionScreenState extends State<EventSelectionScreen> {
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-                // Client-side filtering
                 final events = snapshot.data!.where((e) {
                   final matchTitle = e.title.toLowerCase().contains(_search.toLowerCase());
                   final matchStatus = _filter == "All" || e.status == _filter;
@@ -54,6 +54,21 @@ class _EventSelectionScreenState extends State<EventSelectionScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemBuilder: (context, index) {
                     final event = events[index];
+
+                    // --- 2. DATE FORMATTING LOGIC ---
+                    String formattedDate = "${event.startDate} - ${event.endDate}";
+                    try {
+                      final inputFormat = DateFormat("d/M/yyyy");
+                      DateTime start = inputFormat.parse(event.startDate);
+                      DateTime end = inputFormat.parse(event.endDate);
+
+                      final outputFormat = DateFormat('MMM dd, yyyy');
+                      formattedDate = "${outputFormat.format(start)} - ${outputFormat.format(end)}";
+                    } catch (e) {
+                      // Ignore errors
+                    }
+                    // --------------------------------
+
                     return Card(
                       elevation: 2,
                       margin: const EdgeInsets.only(bottom: 12),
@@ -68,7 +83,6 @@ class _EventSelectionScreenState extends State<EventSelectionScreen> {
                           padding: const EdgeInsets.all(16.0),
                           child: Row(
                             children: [
-                              // Left Side: Event Info
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,36 +92,25 @@ class _EventSelectionScreenState extends State<EventSelectionScreen> {
                                       style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                                     ),
                                     const SizedBox(height: 6),
-
-                                    // Date Row
                                     Row(
                                       children: [
                                         const Icon(Icons.calendar_today, size: 14, color: Colors.blue),
                                         const SizedBox(width: 6),
-                                        Text(
-                                          "${event.startDate} - ${event.endDate}",
-                                          style: TextStyle(fontSize: 12, color: Colors.grey[800]),
-                                        ),
+                                        // --- 3. USE FORMATTED DATE ---
+                                        Text(formattedDate, style: TextStyle(fontSize: 12, color: Colors.grey[800])),
                                       ],
                                     ),
                                     const SizedBox(height: 4),
-
-                                    // Location Row
                                     Row(
                                       children: [
                                         const Icon(Icons.location_on, size: 14, color: Colors.red),
                                         const SizedBox(width: 6),
-                                        Text(
-                                          event.location,
-                                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                                        ),
+                                        Text(event.location, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
                                       ],
                                     ),
                                   ],
                                 ),
                               ),
-
-                              // Right Side: Status & Arrow
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
@@ -118,7 +121,7 @@ class _EventSelectionScreenState extends State<EventSelectionScreen> {
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
-                                      event.status, // "Upcoming"
+                                      event.status,
                                       style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.green[800]),
                                     ),
                                   ),

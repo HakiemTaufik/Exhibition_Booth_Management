@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart'; // <--- 1. IMPORT THIS
 import '../../models/user_model.dart';
 import '../../models/event_model.dart';
 import '../../models/booking_model.dart';
@@ -21,6 +22,8 @@ class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
   final Set<String> _selectedBoothIds = {};
   List<Booth> _allBooths = [];
   List<Booking> _existingBookings = [];
+
+  bool _showFullDescription = false;
 
   bool _isCompetitorAdjacent(String boothName, String myIndustry) {
     try {
@@ -141,6 +144,20 @@ class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // --- 2. DATE FORMATTING LOGIC ---
+    String formattedDate = "${widget.event.startDate} - ${widget.event.endDate}";
+    try {
+      final inputFormat = DateFormat("d/M/yyyy");
+      DateTime start = inputFormat.parse(widget.event.startDate);
+      DateTime end = inputFormat.parse(widget.event.endDate);
+
+      final outputFormat = DateFormat('MMM dd, yyyy');
+      formattedDate = "${outputFormat.format(start)} - ${outputFormat.format(end)}";
+    } catch (e) {
+      // Ignore errors
+    }
+    // --------------------------------
+
     return Scaffold(
       appBar: AppBar(title: Text("Select Booths: ${widget.event.title}")),
       body: StreamBuilder<List<Booth>>(
@@ -156,11 +173,11 @@ class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
 
                 return Column(
                   children: [
-                    // --- NEW: EVENT DETAILS SECTION ---
+                    // --- EVENT DETAILS SECTION ---
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(16.0),
-                      color: Colors.blue[50], // Light blue background
+                      color: Colors.blue[50],
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -168,10 +185,8 @@ class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
                             children: [
                               const Icon(Icons.calendar_today, size: 16, color: Colors.blue),
                               const SizedBox(width: 8),
-                              Text(
-                                "${widget.event.startDate} - ${widget.event.endDate}",
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                              ),
+                              // --- 3. USE FORMATTED DATE ---
+                              Text(formattedDate, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                             ],
                           ),
                           const SizedBox(height: 8),
@@ -182,22 +197,36 @@ class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
                               Text(widget.event.location, style: const TextStyle(fontSize: 14)),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            widget.event.description,
-                            style: TextStyle(color: Colors.grey[700]),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
+                          const SizedBox(height: 12),
+
+                          // EXPANDABLE DESCRIPTION
+                          InkWell(
+                            onTap: () => setState(() => _showFullDescription = !_showFullDescription),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  widget.event.description,
+                                  style: TextStyle(color: Colors.grey[700], height: 1.3),
+                                  maxLines: _showFullDescription ? null : 2,
+                                  overflow: _showFullDescription ? TextOverflow.visible : TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  _showFullDescription ? "Show Less" : "Read More...",
+                                  style: TextStyle(color: Colors.blue[700], fontWeight: FontWeight.bold, fontSize: 12),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    // ----------------------------------
 
                     // Floor Plan Image
                     if (widget.event.floorPlanImage != null && widget.event.floorPlanImage!.isNotEmpty)
                       Expanded(
-                        flex: 2, // Allocate some space to image, but let grid take more if needed
+                        flex: 2,
                         child: Container(
                           width: double.infinity,
                           color: Colors.black12,
@@ -231,7 +260,7 @@ class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
 
                     // Booth Grid
                     Expanded(
-                      flex: 3, // Give grid more space
+                      flex: 3,
                       child: GridView.builder(
                         padding: const EdgeInsets.all(16),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -266,11 +295,8 @@ class _BoothSelectionScreenState extends State<BoothSelectionScreen> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(booth.name, style: TextStyle(fontWeight: FontWeight.bold, color: borderColor)),
-
-                                    // Size & Price
                                     if (!isBooked) Text(booth.dimensions, style: const TextStyle(fontSize: 10, fontStyle: FontStyle.italic)),
                                     if (!isBooked) Text("RM${booth.price.toInt()}", style: const TextStyle(fontSize: 10)),
-
                                     if (isSelected) const Icon(Icons.check_circle, size: 16, color: Colors.blue)
                                   ],
                                 ),

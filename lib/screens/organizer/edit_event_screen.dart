@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // <--- 1. IMPORT THIS
 import '../../models/user_model.dart';
 import '../../models/event_model.dart';
 import '../../database/firestore_service.dart';
@@ -21,6 +22,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
   final _floorPlanController = TextEditingController();
   final _startDateController = TextEditingController();
   final _endDateController = TextEditingController();
+
   String _status = 'Upcoming';
   bool _isPublished = false;
 
@@ -37,6 +39,8 @@ class _EditEventScreenState extends State<EditEventScreen> {
       _startDateController.text = widget.event!.startDate;
       _endDateController.text = widget.event!.endDate;
     }
+
+    // Listen to changes to update the image preview instantly
     _floorPlanController.addListener(() {
       setState(() {});
     });
@@ -45,16 +49,20 @@ class _EditEventScreenState extends State<EditEventScreen> {
   @override
   void dispose() {
     _floorPlanController.dispose();
+    _titleController.dispose();
+    _descController.dispose();
+    _locationController.dispose();
+    _startDateController.dispose();
+    _endDateController.dispose();
     super.dispose();
   }
 
-  // --- NEW HELPER: READ DD/MM/YYYY ---
+  // --- HELPER: Parse Date using intl ---
   DateTime? _parseDate(String input) {
+    if (input.isEmpty) return null;
     try {
-      final parts = input.split('/');
-      if (parts.length != 3) return null;
-      // DateTime(Year, Month, Day)
-      return DateTime(int.parse(parts[2]), int.parse(parts[1]), int.parse(parts[0]));
+      // Matches the "d/M/yyyy" format used elsewhere in the app
+      return DateFormat("d/M/yyyy").parse(input);
     } catch (e) {
       return null;
     }
@@ -63,7 +71,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
   Future<void> _saveEvent() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // --- VALIDATION: Use _parseDate now ---
+    // Validate Date Logic
     final start = _parseDate(_startDateController.text);
     final end = _parseDate(_endDateController.text);
 
@@ -73,7 +81,6 @@ class _EditEventScreenState extends State<EditEventScreen> {
       );
       return;
     }
-    // -------------------------------------
 
     final newEvent = Event(
       id: widget.event?.id,
@@ -96,30 +103,29 @@ class _EditEventScreenState extends State<EditEventScreen> {
 
     if (!mounted) return;
     Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(widget.event == null ? "Event Created!" : "Event Updated!"))
+    );
   }
 
-  // --- UPDATED DATE PICKER: WRITE DD/MM/YYYY ---
+  // --- DATE PICKER LOGIC ---
   Future<void> _pickDate(TextEditingController controller, {DateTime? minDate}) async {
     DateTime initial = DateTime.now();
 
-    // 1. Check constraints
-    if (minDate != null) {
-      if (initial.isBefore(minDate)) {
-        initial = minDate;
+    // 1. If valid minDate exists, ensure initial is not before it
+    if (minDate != null && initial.isBefore(minDate)) {
+      initial = minDate;
+    }
+
+    // 2. If controller has a date, try to use it as initial
+    DateTime? currentSelection = _parseDate(controller.text);
+    if (currentSelection != null) {
+      if (minDate == null || !currentSelection.isBefore(minDate)) {
+        initial = currentSelection;
       }
     }
 
-    // 2. Try to read existing date using _parseDate
-    if (controller.text.isNotEmpty) {
-      DateTime? stored = _parseDate(controller.text);
-      if (stored != null) {
-        if (minDate == null || !stored.isBefore(minDate)) {
-          initial = stored;
-        }
-      }
-    }
-
-    DateTime? picked = await showDatePicker(
+    final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: initial,
       firstDate: minDate ?? DateTime(2025),
@@ -127,8 +133,9 @@ class _EditEventScreenState extends State<EditEventScreen> {
     );
 
     if (picked != null) {
-      // --- FORMAT CHANGE: DD/MM/YYYY ---
-      controller.text = "${picked.day.toString().padLeft(2,'0')}/${picked.month.toString().padLeft(2,'0')}/${picked.year}";
+      // --- FORMAT: d/M/yyyy (e.g. 8/1/2026 or 08/01/2026) ---
+      // utilizing intl to keep it standard
+      controller.text = DateFormat("d/M/yyyy").format(picked);
     }
   }
 
@@ -143,8 +150,15 @@ class _EditEventScreenState extends State<EditEventScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextFormField(controller: _titleController, decoration: const InputDecoration(labelText: "Title"), validator: (v) => v!.isEmpty ? "Req" : null),
+              // Title
+              TextFormField(
+                  controller: _titleController,
+                  decoration: const InputDecoration(labelText: "Title"),
+                  validator: (v) => v!.isEmpty ? "Required" : null
+              ),
               const SizedBox(height: 10),
+
+              // Dates Row
               Row(
                 children: [
                   Expanded(
@@ -153,7 +167,7 @@ class _EditEventScreenState extends State<EditEventScreen> {
                       decoration: const InputDecoration(labelText: "Start Date", suffixIcon: Icon(Icons.calendar_today)),
                       readOnly: true,
                       onTap: () => _pickDate(_startDateController),
-                      validator: (v) => v!.isEmpty ? "Req" : null,
+                      validator: (v) => v!.isEmpty ? "Required" : null,
                     ),
                   ),
                   const SizedBox(width: 10),
@@ -162,23 +176,38 @@ class _EditEventScreenState extends State<EditEventScreen> {
                       controller: _endDateController,
                       decoration: const InputDecoration(labelText: "End Date", suffixIcon: Icon(Icons.calendar_today)),
                       readOnly: true,
-                      // --- USE _parseDate TO GET MIN DATE ---
                       onTap: () {
+                        // Pass start date as minimum for end date
                         DateTime? start = _parseDate(_startDateController.text);
                         _pickDate(_endDateController, minDate: start);
                       },
-                      validator: (v) => v!.isEmpty ? "Req" : null,
+                      validator: (v) => v!.isEmpty ? "Required" : null,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 10),
-              TextFormField(controller: _locationController, decoration: const InputDecoration(labelText: "Location"), validator: (v) => v!.isEmpty ? "Req" : null),
+
+              // Location
+              TextFormField(
+                  controller: _locationController,
+                  decoration: const InputDecoration(labelText: "Location"),
+                  validator: (v) => v!.isEmpty ? "Required" : null
+              ),
               const SizedBox(height: 10),
-              TextFormField(controller: _descController, decoration: const InputDecoration(labelText: "Description"), maxLines: 3),
+
+              // Description
+              TextFormField(
+                  controller: _descController,
+                  decoration: const InputDecoration(labelText: "Description"),
+                  maxLines: 3
+              ),
               const SizedBox(height: 20),
+
+              // Floor Plan Image URL
               TextFormField(
                 controller: _floorPlanController,
+                keyboardType: TextInputType.url,
                 decoration: const InputDecoration(
                   labelText: "Floor Plan Image URL",
                   hintText: "https://example.com/map.png",
@@ -187,6 +216,8 @@ class _EditEventScreenState extends State<EditEventScreen> {
                 ),
               ),
               const SizedBox(height: 10),
+
+              // Image Preview
               if (_floorPlanController.text.isNotEmpty)
                 Container(
                   height: 200,
@@ -208,11 +239,29 @@ class _EditEventScreenState extends State<EditEventScreen> {
                   ),
                 ),
               const SizedBox(height: 10),
-              SwitchListTile(title: const Text("Published?"), value: _isPublished, onChanged: (v) => setState(() => _isPublished = v)),
+
+              // Published Switch
+              SwitchListTile(
+                  title: const Text("Published?"),
+                  subtitle: Text(_isPublished ? "Visible to guests" : "Hidden (Draft)"),
+                  value: _isPublished,
+                  onChanged: (v) => setState(() => _isPublished = v)
+              ),
+
               const SizedBox(height: 20),
+
+              // Save Button
               SizedBox(
                 width: double.infinity,
-                child: ElevatedButton(onPressed: _saveEvent, child: const Text("Save Event")),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: _saveEvent,
+                  child: const Text("Save Event", style: TextStyle(fontSize: 16)),
+                ),
               ),
             ],
           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // <--- 1. IMPORT THIS
 import '../../models/event_model.dart';
 import '../auth/welcome_screen.dart';
 
@@ -9,6 +10,20 @@ class EventDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // --- 2. DATE FORMATTING LOGIC ---
+    String formattedDate = "${event.startDate} to ${event.endDate}";
+    try {
+      final inputFormat = DateFormat("d/M/yyyy");
+      DateTime start = inputFormat.parse(event.startDate);
+      DateTime end = inputFormat.parse(event.endDate);
+
+      final outputFormat = DateFormat('MMM dd, yyyy');
+      formattedDate = "${outputFormat.format(start)} - ${outputFormat.format(end)}";
+    } catch (e) {
+      // Ignore errors
+    }
+    // --------------------------------
+
     return Scaffold(
       appBar: AppBar(title: Text(event.title)),
       body: SingleChildScrollView(
@@ -18,8 +33,10 @@ class EventDetailsScreen extends StatelessWidget {
           children: [
             Text(event.title, style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 8),
-            // [FIXED] Show start and end date
-            Text("Date: ${event.startDate} to ${event.endDate}", style: const TextStyle(color: Colors.grey)),
+
+            // --- 3. USE FORMATTED DATE ---
+            Text("Date: $formattedDate", style: const TextStyle(color: Colors.grey)),
+
             Text("Location: ${event.location}", style: const TextStyle(color: Colors.grey)),
             const SizedBox(height: 24),
             const Text("About Event", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),

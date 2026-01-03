@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../models/user_model.dart';
 import '../../models/event_model.dart';
 import '../../database/firestore_service.dart';
@@ -27,13 +28,12 @@ class AdminHomeScreen extends StatelessWidget {
     FirestoreService.instance.updateEvent(updated);
   }
 
-  // --- NEW: CONFIRMATION REMINDER DIALOG ---
+  // --- DELETE CONFIRMATION REMINDER DIALOG ---
   void _deleteEvent(BuildContext context, String eventId) {
     showDialog(
       context: context,
       builder: (c) => AlertDialog(
         title: const Text("Delete Event?"),
-        // This is the "Reminder" text
         content: const Text(
           "Are you sure you want to delete this event?\n\nThis will permanently remove all data and cannot be undone.",
           style: TextStyle(fontSize: 14),
@@ -45,11 +45,8 @@ class AdminHomeScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
-              // 1. Actually delete from database
               FirestoreService.instance.deleteEvent(eventId);
-              // 2. Close the dialog
               Navigator.pop(c);
-              // 3. Show success message
               ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Event deleted successfully"))
               );
@@ -60,7 +57,6 @@ class AdminHomeScreen extends StatelessWidget {
       ),
     );
   }
-  // ------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +95,26 @@ class AdminHomeScreen extends StatelessWidget {
                   itemCount: events.length,
                   itemBuilder: (context, index) {
                     final event = events[index];
+
+                    // --- UPDATED DATE FORMATTING LOGIC ---
+                    String formattedDate = "${event.startDate} - ${event.endDate}"; // Default fallback
+
+                    try {
+                      // 1. Define the Input Format (matches DB: "08/01/2026")
+                      final inputFormat = DateFormat("d/M/yyyy");
+
+                      DateTime start = inputFormat.parse(event.startDate);
+                      DateTime end = inputFormat.parse(event.endDate);
+
+                      // 2. Define the Output Format (Professional: "Jan 08, 2026")
+                      final outputFormat = DateFormat('MMM dd, yyyy');
+                      formattedDate = "${outputFormat.format(start)} - ${outputFormat.format(end)}";
+                    } catch (e) {
+                      // If parsing fails (e.g., different format), keep the original text
+                      // print("Date parse error: $e");
+                    }
+                    // -------------------------------------
+
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       child: ListTile(
@@ -109,16 +125,16 @@ class AdminHomeScreen extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 4),
-                            // Date
+                            // Date Row
                             Row(
                               children: [
                                 const Icon(Icons.calendar_today, size: 12, color: Colors.grey),
                                 const SizedBox(width: 4),
-                                Text("${event.startDate} - ${event.endDate}", style: const TextStyle(fontSize: 12)),
+                                Text(formattedDate, style: const TextStyle(fontSize: 12)),
                               ],
                             ),
                             const SizedBox(height: 2),
-                            // Location
+                            // Location Row
                             Row(
                               children: [
                                 const Icon(Icons.location_on, size: 12, color: Colors.grey),
@@ -127,7 +143,7 @@ class AdminHomeScreen extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 6),
-                            // Status
+                            // Status Text
                             Text(
                               event.isPublished == 1 ? "Published" : "Draft (Hidden)",
                               style: TextStyle(
@@ -139,25 +155,23 @@ class AdminHomeScreen extends StatelessWidget {
                           ],
                         ),
 
-                        // --- UPDATED BUTTONS ---
+                        // --- ACTION BUTTONS ---
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Publish Switch
                             Switch(
                               value: event.isPublished == 1,
                               activeColor: Colors.green,
                               onChanged: (val) => _togglePublish(event),
                             ),
-                            // Delete Button (Calls the Reminder Dialog)
                             IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
                               tooltip: "Delete Event",
-                              onPressed: () => _deleteEvent(context, event.id!), // <--- Trigger Reminder Here
+                              onPressed: () => _deleteEvent(context, event.id!),
                             ),
                           ],
                         ),
-                        // -----------------------
+                        // ----------------------
 
                         onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => OrganizerEventDashboard(user: user, event: event))),
                       ),
